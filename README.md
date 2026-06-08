@@ -149,7 +149,3 @@ The UI includes an explicit disclaimer (lines 136–137): technical, sentiment, 
 - The quality of Claude's fundamental scoring depends entirely on the ratios yfinance returns, which vary by ticker and may be incomplete
 
 ---
-
-## Legacy Layer (root `main.py`, `analyzer.py`)
-
-These files are a separate batch ingestion and sentiment pipeline that writes to Supabase. They do not share code with the `app/` service and do not communicate with it at runtime. They are documented separately — this README covers the live app only.
