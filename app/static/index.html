@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equity Lens — analysis helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#faf9f6; --card:#ffffff; --ink:#16181d; --muted:#6b6f76;
+    --line:#e7e4dc; --line-strong:#d6d2c8;
+    --up:#0f7a52; --up-soft:#e4f1ea; --down:#b3261e; --down-soft:#f7e6e4;
+    --accent:#1c3f5f; --band:rgba(28,63,95,.10);
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --serif:"Newsreader",Georgia,serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 64px}
+
+  /* Header */
+  header{border-bottom:1px solid var(--line);background:var(--paper);position:sticky;top:0;z-index:5}
+  .hbar{max-width:1080px;margin:0 auto;padding:18px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .brand{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.01em;white-space:nowrap}
+  .brand span{color:var(--accent)}
+  .search{display:flex;gap:8px;margin-left:auto}
+  .search input{font-family:var(--mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase;
+    border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;width:130px;background:var(--card);color:var(--ink)}
+  .search input:focus{outline:none;border-color:var(--accent)}
+  .search button{font-family:var(--sans);font-weight:500;font-size:14px;border:none;border-radius:8px;
+    padding:9px 18px;background:var(--accent);color:#fff;cursor:pointer}
+  .search button:disabled{opacity:.5;cursor:default}
+
+  /* Snapshot */
+  .snap{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:28px 0 22px;border-bottom:1px solid var(--line)}
+  .co h1{font-family:var(--serif);font-weight:500;font-size:30px;margin:0;letter-spacing:-.02em}
+  .co .tk{font-family:var(--mono);color:var(--muted);font-size:13px;letter-spacing:.08em;margin-top:2px}
+  .metrics{display:flex;gap:14px;flex-wrap:wrap}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-width:150px}
+  .metric .k{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+  .metric .v{font-family:var(--mono);font-size:22px;font-weight:500;margin-top:4px}
+  .up{color:var(--up)} .down{color:var(--down)}
+
+  /* Sections */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .card.full{grid-column:1 / -1}
+  .card h2{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 2px}
+  .card .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .chart-box{position:relative;height:300px}
+
+  /* Score meter */
+  .meter{margin:6px 0 16px}
+  .meter .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .badge{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 10px;border-radius:999px}
+  .track{position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,var(--down-soft),#f0eee8,var(--up-soft))}
+  .track .mid{position:absolute;left:50%;top:-3px;width:1px;height:14px;background:var(--line-strong)}
+  .track .dot{position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;border:2px solid var(--card);transform:translateX(-50%)}
+  .summary{color:#33373e;margin:4px 0 14px}
+  .drivers{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+  .drivers li{display:flex;gap:10px;font-size:14px;color:#3a3e45}
+  .drivers li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:8px}
+
+  .note{display:none;background:var(--down-soft);border:1px solid #e9c9c5;color:#7c2018;
+    border-radius:10px;padding:10px 14px;font-size:13px;margin-top:18px}
+  .note.show{display:block}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;line-height:1.7}
+  .loading{opacity:.45;transition:opacity .2s}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}.co h1{font-size:24px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hbar">
+    <div class="brand">Equity<span>Lens</span></div>
+    <div class="search">
+      <input id="ticker" value="AAPL" maxlength="10" spellcheck="false" aria-label="Ticker symbol">
+      <button id="go">Analyze</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="app">
+  <div class="snap">
+    <div class="co">
+      <h1 id="co-name">Apple Inc.</h1>
+      <div class="tk"><span id="co-tk">AAPL</span> · last close <span id="co-px">—</span></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="k">Projected (<span id="m-h">30</span>d)</div><div class="v" id="m-target">—</div></div>
+      <div class="metric"><div class="k">Expected return</div><div class="v" id="m-ret">—</div></div>
+      <div class="metric"><div class="k">Upside probability</div><div class="v" id="m-up">—</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card full">
+      <h2>Price projection</h2>
+      <div class="sub">Kronos forecast · mean path with 10–90% band over recent history</div>
+      <div class="chart-box"><canvas id="chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Sentiment</h2>
+      <div class="sub">News-driven mood from recent headlines</div>
+      <div class="meter">
+        <div class="top"><span class="badge" id="s-badge">—</span><span class="v" style="font-family:var(--mono);font-size:18px" id="s-score">—</span></div>
+        <div class="track"><div class="mid"></div><div class="dot" id="s-dot"></div></div>
+      </div>
+      <p class="summary" id="s-sum"></p>
+      <ul class="drivers" id="s-drivers"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Fundamentals</h2>
+      <div class="sub">Financial health from valuation, growth, profitability</div>
+      <div class="meter">
+        <div class="top"><span class="badge" id="f-badge">—</span><span class="v" style="font-family:var(--mono);font-size:18px" id="f-score">—</span></div>
+        <div class="track"><div class="mid"></div><div class="dot" id="f-dot"></div></div>
+      </div>
+      <p class="summary" id="f-sum"></p>
+      <ul class="drivers" id="f-drivers"></ul>
+    </div>
+  </div>
+
+  <div class="note" id="note"></div>
+
+  <footer>
+    For research and educational use only. Forecasts are model estimates with wide uncertainty and the
+    technical, sentiment, and fundamental signals can disagree. Nothing here is financial advice or a
+    recommendation to buy or sell any security.
+  </footer>
+</div>
+
+<script>
+// Point this at your FastAPI server. Leave "" to call the same origin that serves this page.
+const API_BASE = "";
+
+// Sample payload — mirrors the /api/analyze response so the page renders standalone.
+const SAMPLE = {
+  ticker:"AAPL", company:"Apple Inc.", last_close:212.44, currency:"USD",
+  technical:{
+    last_close:212.44, horizon_days:30, expected_close:221.10,
+    expected_return_pct:4.08, upside_probability:0.667,
+    history_tail:{
+      dates:Array.from({length:40},(_,i)=>`d${i}`),
+      close:[198,196,199,201,203,200,202,205,204,207,206,209,208,210,207,209,211,210,213,212,214,213,215,212,210,213,214,216,215,213,211,214,216,215,217,214,213,215,214,212.44]
+    },
+    projection:{
+      dates:Array.from({length:30},(_,i)=>`f${i}`),
+      mean:[213,214,215,215.5,216,217,217.5,218,218.6,219,219.4,219.8,220,220.3,220.6,220.9,221,221.1,221.3,221.4,221.5,221.6,221.7,221.8,221.9,222,222,221.9,221.6,221.10],
+      lower:[211,210,209,208.5,208,207,206.5,206,205.6,205,204.4,204,203.6,203,202.6,202,201.6,201,200.6,200,199.6,199,198.6,198,197.6,197,196.6,196,195.6,195],
+      upper:[215,217,219,221,223,225,227,229,231,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253]
+    }
+  },
+  sentiment:{score:0.42,label:"bullish",summary:"Coverage skews positive on resilient services revenue and steady demand, tempered by caution around hardware cycle timing and regulatory headlines in Europe.",drivers:["Services revenue beats expectations","Analyst price-target raises","EU regulatory scrutiny noted as a watch item"]},
+  fundamental:{score:0.31,label:"strong",summary:"High margins and strong free cash flow support a premium valuation, though forward multiples are elevated and revenue growth has moderated from prior years.",highlights:["Profit margins among sector leaders","Robust free cash flow generation","Elevated forward P/E vs. historical range"]},
+  errors:{}
+};
+
+let chart;
+const $ = id => document.getElementById(id);
+const fmt = (n,d=2)=> n==null?"—":Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function paintMeter(prefix, data, posLabels){
+  const score = data.score ?? 0;
+  const pct = ((score + 1) / 2) * 100;
+  const positive = score >= 0;
+  const dot = $(prefix+"-dot");
+  dot.style.left = pct + "%";
+  dot.style.background = positive ? css("--up") : css("--down");
+  $(prefix+"-score").textContent = (score>0?"+":"") + fmt(score,2);
+  const badge = $(prefix+"-badge");
+  badge.textContent = data.label || "—";
+  badge.style.background = positive ? css("--up-soft") : css("--down-soft");
+  badge.style.color = positive ? css("--up") : css("--down");
+  $(prefix+"-sum").textContent = data.summary || "";
+  const list = $(prefix+"-drivers"); list.innerHTML = "";
+  (data.drivers || data.highlights || []).forEach(d=>{
+    const li=document.createElement("li"); li.textContent=d; list.appendChild(li);
+  });
+}
+
+function drawChart(t){
+  const h = t.history_tail, p = t.projection;
+  const labels = [...h.dates, ...p.dates];
+  const pad = a => Array(h.dates.length).fill(null).concat(a);
+  const histClose = h.close.concat(Array(p.dates.length).fill(null));
+  // Connect history to projection at the seam.
+  const seam = h.close[h.close.length-1];
+  const meanLine = pad(p.mean); meanLine[h.dates.length-1]=seam;
+
+  if(chart) chart.destroy();
+  chart = new Chart($("chart"),{
+    type:"line",
+    data:{labels,datasets:[
+      {label:"Upper",data:pad(p.upper),borderWidth:0,pointRadius:0,fill:"+1",backgroundColor:css("--band")},
+      {label:"Lower",data:pad(p.lower),borderWidth:0,pointRadius:0,fill:false},
+      {label:"History",data:histClose,borderColor:css("--ink"),borderWidth:1.6,pointRadius:0,tension:.25},
+      {label:"Forecast",data:meanLine,borderColor:css("--accent"),borderWidth:1.8,borderDash:[5,4],pointRadius:0,tension:.25},
+    ]},
+    options:{
+      maintainAspectRatio:false, animation:{duration:500},
+      interaction:{mode:"index",intersect:false},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>c.parsed.y==null?null:`${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{display:false}},
+        y:{grid:{color:css("--line")},ticks:{font:{family:css("--mono"),size:11},color:css("--muted")},position:"right"}
+      }
+    }
+  });
+}
+
+function render(d){
+  $("co-name").textContent = d.company || d.ticker;
+  $("co-tk").textContent = d.ticker;
+  $("co-px").textContent = (d.currency==="USD"?"$":"") + fmt(d.last_close);
+  $("ticker").value = d.ticker;
+
+  const t = d.technical;
+  if(t){
+    $("m-h").textContent = t.horizon_days;
+    $("m-target").textContent = (d.currency==="USD"?"$":"") + fmt(t.expected_close);
+    const ret = t.expected_return_pct;
+    const re = $("m-ret"); re.textContent = (ret>0?"+":"")+fmt(ret)+"%";
+    re.className = "v " + (ret>=0?"up":"down");
+    $("m-up").textContent = fmt(t.upside_probability*100,1)+"%";
+    drawChart(t);
+  }
+  if(d.sentiment) paintMeter("s", d.sentiment);
+  if(d.fundamental) paintMeter("f", d.fundamental);
+
+  const note = $("note");
+  const errs = Object.entries(d.errors||{});
+  if(errs.length){ note.classList.add("show"); note.textContent = "Some legs were unavailable: " + errs.map(([k,v])=>`${k} (${v})`).join("; "); }
+  else note.classList.remove("show");
+}
+
+async function analyze(){
+  const tk = $("ticker").value.trim().toUpperCase();
+  if(!tk) return;
+  const btn = $("go"); btn.disabled = true; btn.textContent="…";
+  $("app").classList.add("loading");
+  try{
+    const h = $("m-h").textContent || 30;
+    const res = await fetch(`${API_BASE}/api/analyze?ticker=${encodeURIComponent(tk)}&horizon=30`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    render(await res.json());
+  }catch(e){
+    const note=$("note"); note.classList.add("show");
+    note.textContent = `Could not reach the API (${e.message}). Showing sample data — set API_BASE and run the FastAPI server to use live data.`;
+  }finally{
+    btn.disabled=false; btn.textContent="Analyze"; $("app").classList.remove("loading");
+  }
+}
+
+$("go").addEventListener("click", analyze);
+$("ticker").addEventListener("keydown", e=>{ if(e.key==="Enter") analyze(); });
+render(SAMPLE);  // initial paint
+</script>
+</body>
+</html>

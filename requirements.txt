@@ -1,0 +1,19 @@
+# --- Web layer ---
+fastapi>=0.110
+uvicorn[standard]>=0.29
+
+# --- Data ---
+yfinance>=0.2.40
+pandas>=2.0
+numpy>=1.24
+
+# --- Analysis model (sentiment + fundamentals) ---
+anthropic>=0.40
+
+# --- Kronos forecaster ---
+# Kronos itself is not on PyPI. Clone it next to this project and add it to the
+# path (see forecast.py), then install its own requirements:
+#   git clone https://github.com/shiyu-coder/Kronos.git
+#   pip install -r Kronos/requirements.txt
+# Kronos pulls in torch + huggingface_hub; the model weights download on first run
+# from HuggingFace (NeoQuasar/Kronos-small, NeoQuasar/Kronos-Tokenizer-base).

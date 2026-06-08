@@ -1,0 +1,46 @@
+TrAIde — Startup (Windows / PowerShell)
+
+
+Terminal 1 — Python backend (FastAPI + Kronos forecaster + Anthropic analysis, all in one process):
+
+    cd C:\Users\andre\Dev\TrAIde
+    .\.venv\Scripts\Activate.ps1
+    uvicorn app.app:app --reload
+
+    Serves:
+      http://127.0.0.1:8000/   — dashboard (price chart + analysis UI)
+      http://127.0.0.1:8000/api/analyze?ticker=AAPL&horizon=30   — JSON analysis API
+
+    Notes:
+      ANTHROPIC_API_KEY is read from .env automatically (load_dotenv in app/app.py).
+      Runs on CPU (torch 2.12.0+cpu); KRONOS_DEVICE is left unset.
+      First /api/analyze request is slow (~30-60s): Kronos downloads + loads model
+      weights from HuggingFace, then caches them for all later requests.
+      Stop the server with Ctrl+C.
+
+    If activation fails with an execution-policy error, run ONCE (current user only):
+      Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+    ...then retry. Or skip activation entirely:
+      cd C:\Users\andre\Dev\TrAIde
+      .\.venv\Scripts\python.exe -m uvicorn app.app:app --reload
+
+
+Terminal 2 — smoke test (optional; server from Terminal 1 must be running):
+
+    cd C:\Users\andre\Dev\TrAIde
+    Invoke-RestMethod "http://127.0.0.1:8000/api/analyze?ticker=AAPL&horizon=30" | ConvertTo-Json -Depth 6
+
+    Healthy result: HTTP 200, "errors": {} , and populated technical / sentiment / fundamental blocks.
+    The two analysis legs fail independently into "errors" — empty {} means all legs are live.
+
+
+Optional — tuning / GPU:
+
+    Smoother forecast bands (slower on CPU): raise n_paths in app/forecast.py (currently 5).
+
+    GPU: only set KRONOS_DEVICE=cuda:0 AFTER installing a CUDA torch build and confirming
+      .\.venv\Scripts\python.exe -c "import torch; print(torch.cuda.is_available())"
+    prints True. The current install is CPU-only; do NOT set cuda:0 against it.
+
+    Security: .env holds the API key in plaintext. If this folder becomes a git repo,
+    add .env to .gitignore before committing.
