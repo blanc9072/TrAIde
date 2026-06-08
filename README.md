@@ -150,12 +150,6 @@ The UI includes an explicit disclaimer (lines 136–137): technical, sentiment, 
 
 ---
 
-## Security Note
-
-Your `.env` file contains live API keys for Anthropic, Gemini, Polygon, and Supabase in plaintext. **Add `.env` to `.gitignore` before initializing or pushing a git repository.** This is flagged in `Startup.txt` as well.
-
----
-
 ## Legacy Layer (root `main.py`, `analyzer.py`)
 
 These files are a separate batch ingestion and sentiment pipeline that writes to Supabase. They do not share code with the `app/` service and do not communicate with it at runtime. They are documented separately — this README covers the live app only.
